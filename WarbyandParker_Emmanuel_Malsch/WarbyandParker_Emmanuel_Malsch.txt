@@ -1,0 +1,92 @@
+-- Get to know the "Style Quiz" table, Fig. 1
+ 
+ SELECT *
+ FROM survey
+ LIMIT 10;
+
+-- Style Quiz Funnel Fig. 2
+ 
+ SELECT question, COUNT(DISTINCT user_id)
+ FROM survey
+ GROUP BY question;
+ 
+-- Distribution of colors for each Style in the Purchase Table, Fig. 8
+ 
+ SELECT style, color, COUNT(*)
+ FROM purchase
+ GROUP BY style, color
+ ORDER BY 1,3 DESC;
+
+-- Distribution of Models for each Style in the Purchase Table, Fig. 9
+
+ SELECT style, model_name, COUNT(*)
+ FROM purchase
+ GROUP BY style, model_name
+ ORDER BY 1,3 DESC;
+ 
+-- Distribution of Fits in the Quiz Table, Fig. 10
+ 
+ SELECT fit, COUNT(*)
+ FROM quiz
+ GROUP BY fit;
+
+-- Distribution of Shapes in the Quiz Table, Fig. 11
+  
+ SELECT shape, COUNT(*)
+ FROM quiz
+ GROUP BY shape;
+
+-- Overall Covnersion Funnel, Fig. 4
+
+WITH funnel AS (
+  WITH cx AS (SELECT DISTINCT *
+FROM quiz q
+LEFT JOIN home_try_on h
+ON q.user_id = h.user_id
+LEFT JOIN purchase p
+ON p.user_id = q.user_id)
+SELECT DISTINCT user_id
+, CASE
+WHEN number_of_pairs IS NOT NULL THEN 1
+ELSE 0
+END AS is_home_try_on
+, CASE
+WHEN number_of_pairs = '5 pairs' THEN 5
+WHEN number_of_pairs = '3 pairs' THEN 3
+ELSE 'NULL'
+END AS number_of_pairs
+, CASE
+WHEN product_id IS NOT NULL THEN 1
+ELSE 0
+END AS is_purchase
+FROM cx)
+SELECT COUNT(DISTINCT user_id) AS 'Unique Visitors', SUM(funnel.is_home_try_on) AS 'Home try ons', SUM(funnel.is_purchase) AS 'Purchases'
+ FROM funnel;
+ 
+-- AB Testing with homd Try-on Funnel, Fig. 6
+ 
+ WITH funnel AS (
+  WITH cx AS (SELECT DISTINCT *
+FROM quiz q
+LEFT JOIN home_try_on h
+ON q.user_id = h.user_id
+LEFT JOIN purchase p
+ON p.user_id = q.user_id)
+SELECT DISTINCT user_id
+, CASE
+WHEN number_of_pairs IS NOT NULL THEN 1
+ELSE 0
+END AS is_home_try_on
+, CASE
+WHEN number_of_pairs = '5 pairs' THEN 5
+WHEN number_of_pairs = '3 pairs' THEN 3
+ELSE 'NULL'
+END AS number_of_pairs
+, CASE
+WHEN product_id IS NOT NULL THEN 1
+ELSE 0
+END AS is_purchase
+FROM cx)
+SELECT number_of_pairs AS 'Number of pairs', COUNT(DISTINCT user_id) AS 'Unique Visitors', SUM(funnel.is_home_try_on) AS 'Home try ons', SUM(funnel.is_purchase) AS 'Purchases', ROUND(1.0*SUM(funnel.is_purchase)/SUM(funnel.is_home_try_on), 2) AS 'Conversion rate'
+ FROM funnel
+ GROUP BY number_of_pairs;
